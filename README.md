@@ -118,30 +118,31 @@ CREATE TABLE return_status
 -- "978-1-60129-456-2', 'To Kill a Mockingbird', 'Classic', 6.00, 'yes', 'Harper Lee', 'J.B. Lippincott & Co.')"
 
 ```sql
-INSERT INTO books(isbn, book_title, category, rental_price, status, author, publisher)
-VALUES('978-1-60129-456-2', 'To Kill a Mockingbird', 'Classic', 6.00, 'yes', 'Harper Lee', 'J.B. Lippincott & Co.');
-SELECT * FROM books;
+INSERT INTO dbo.books
+VALUES ('978-1-60129-456-2', 'To Kill a Mockingbird', 'Classic', 6.00, 'yes', 'Harper Lee', 'J.B. Lippincott & Co.');
 ```
 **Task 2: Update an Existing Member's Address**
 
 ```sql
-UPDATE members
-SET member_address = '125 Oak St'
-WHERE member_id = 'C103';
+UPDATE dbo.members
+SET member_address = 'Atladara,Vadodara'
+WHERE member_id = 'C119'
 ```
 
 **Task 3: Delete a Record from the Issued Status Table**
 -- Objective: Delete the record with issued_id = 'IS121' from the issued_status table.
 
 ```sql
-DELETE FROM issued_status
-WHERE   issued_id =   'IS121';
+DELETE FROM dbo.issued_status
+WHERE issued_id = 'IS104'
 ```
 
 **Task 4: Retrieve All Books Issued by a Specific Employee**
 -- Objective: Select all books issued by the employee with emp_id = 'E101'.
 ```sql
-SELECT * FROM issued_status
+SELECT issued_emp_id AS emp_id,
+       issued_book_name AS Books 
+FROM dbo.issued_status 
 WHERE issued_emp_id = 'E101'
 ```
 
@@ -150,93 +151,99 @@ WHERE issued_emp_id = 'E101'
 -- Objective: Use GROUP BY to find members who have issued more than one book.
 
 ```sql
-SELECT
-    issued_emp_id,
-    COUNT(*)
-FROM issued_status
-GROUP BY 1
-HAVING COUNT(*) > 1
-```
-
-### 3. CTAS (Create Table As Select)
-
-- **Task 6: Create Summary Tables**: Used CTAS to generate new tables based on query results - each book and total book_issued_cnt**
-
-```sql
-CREATE TABLE book_issued_cnt AS
-SELECT b.isbn, b.book_title, COUNT(ist.issued_id) AS issue_count
-FROM issued_status as ist
-JOIN books as b
-ON ist.issued_book_isbn = b.isbn
-GROUP BY b.isbn, b.book_title;
+SELECT member_id,
+       member_name,
+       COUNT(issued_member_id) AS Book_issued_cnt
+FROM dbo.issued_status I
+JOIN dbo.members M
+ON I.issued_member_id = M.member_id
+GROUP BY member_id,member_name
+HAVING COUNT(issued_member_id) > 1
 ```
 
 
-### 4. Data Analysis & Findings
+### 3. Data Analysis & Findings
 
 The following SQL queries were used to address specific questions:
 
-Task 7. **Retrieve All Books in a Specific Category**:
+Task 6. **Retrieve All Books in a Specific Category**:
 
 ```sql
-SELECT * FROM books
-WHERE category = 'Classic';
+SELECT * 
+FROM dbo.books
+WHERE category = 'Classic'
 ```
 
-8. **Task 8: Find Total Rental Income by Category**:
+**Task 7: Find Total Rental Income by Category**:
 
 ```sql
-SELECT 
-    b.category,
-    SUM(b.rental_price),
-    COUNT(*)
-FROM 
-issued_status as ist
-JOIN
-books as b
-ON b.isbn = ist.issued_book_isbn
-GROUP BY 1
+SELECT B.category,
+       SUM(rental_price) AS Rental_income,
+	   COUNT(issued_id) AS Book_issued_cnt
+FROM dbo.books B
+JOIN dbo.issued_status IB
+ON B.isbn = IB.issued_book_isbn
+GROUP BY B.category
+ORDER BY Rental_income
 ```
 
-9. **List Members Who Registered in the Last 180 Days**:
+Task 8. **List Members Who Registered in the Last 180 Days**:
 ```sql
-SELECT * FROM members
-WHERE reg_date >= CURRENT_DATE - INTERVAL '180 days';
+--Updating some records with recent dates
+
+UPDATE dbo.members
+SET reg_date = '2024-11-01'
+WHERE member_id = 'C118'
+
+UPDATE dbo.members
+SET reg_date = '2024-12-01'
+WHERE member_id = 'C119'
+
+
+WITH cte_tbl1
+AS
+(
+SELECT *,
+      DATEDIFF(DD,reg_date,GETDATE()) AS Days_tillnow
+FROM dbo.members
+)
+SELECT member_id,
+       member_name
+FROM cte_tbl1
+WHERE Days_tillnow < 180
 ```
 
-10. **List Employees with Their Branch Manager's Name and their branch details**:
+Task 9. **List Employees with Their Branch Manager's Name and their branch details**:
 
 ```sql
-SELECT 
-    e1.emp_id,
-    e1.emp_name,
-    e1.position,
-    e1.salary,
-    b.*,
-    e2.emp_name as manager
-FROM employees as e1
-JOIN 
-branch as b
-ON e1.branch_id = b.branch_id    
-JOIN
-employees as e2
-ON e2.emp_id = b.manager_id
+SELECT E.emp_id,
+       E.emp_name,
+       B.manager_id,
+       E2.emp_name AS Manager_name
+FROM dbo.employees E 
+    JOIN dbo.branch B 
+	ON E.branch_id = B.branch_id
+	JOIN dbo.employees E2
+	ON E2.emp_id = B.manager_id	
 ```
 
-Task 11. **Create a Table of Books with Rental Price Above a Certain Threshold**:
+Task 10. **Create a View of Books with Rental Price Above a Certain Threshold**:
 ```sql
-CREATE TABLE expensive_books AS
-SELECT * FROM books
-WHERE rental_price > 7.00;
+CREATE VIEW Vw_Expensive_books
+AS
+SELECT * 
+FROM dbo.books
+WHERE rental_price > 7
 ```
 
-Task 12: **Retrieve the List of Books Not Yet Returned**
+Task 11: **Retrieve the List of Books Not Yet Returned**
 ```sql
-SELECT * FROM issued_status as ist
-LEFT JOIN
-return_status as rs
-ON rs.issued_id = ist.issued_id
-WHERE rs.return_id IS NULL;
+SELECT DISTINCT IST.issued_book_name AS Books_notreturn,
+       IST.issued_book_isbn AS Book_isbn
+FROM dbo.issued_status IST
+    LEFT JOIN dbo.return_status RST
+	ON IST.issued_id = RST.issued_id
+WHERE RST.return_id IS NULL
 ```
 
 ## Advanced SQL Operations
