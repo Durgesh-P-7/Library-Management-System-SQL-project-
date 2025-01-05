@@ -8,6 +8,7 @@
 This project demonstrates the implementation of a Library Management System using SQL. It includes creating and managing tables, performing CRUD operations, and executing advanced SQL queries. The goal is to showcase skills in database design, manipulation, and querying.
 
 ![Library_project]((https://github.com/Durgesh-P-7/Library-Management-System-SQL-project-/blob/main/library.jpg))
+![library](https://github.com/user-attachments/assets/19883a31-8395-4121-9498-d847c93ea7d6)
 
 ## Objectives
 
